@@ -9,7 +9,6 @@ const options = {
   },
 };
 module.exports = (schema) => (req, res, next) => {
-  console.log(req);
   try {
     Object.keys(schema).forEach((key) => {
       const { error } = schema[key].validate(req[key], options);
