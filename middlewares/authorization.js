@@ -1,16 +1,18 @@
-const jwt = require("jsonwebtoken");
+const jwt = require("../utils/jwt");
+
 const { UnAuthorizedException } = require("../helpers/errorResponse");
 validateToken = async (req, res, next) => {
   try {
-    const token =
-      req.body.token || req.query.token || req.headers["x-access-token"];
+    if (!req.headers.authorization)
+      throw new UnauthorizedException("MESSAGES.ERRORS.TOKEN_HEADER_NOT_FOUND");
+    const token = req.headers.authorization.split(" ")[1];
     if (!token) throw new UnAuthorizedException("Token Required");
-    const decoded = jwt.verify(token, process.env.TOKEN_KEY);
+    const decoded = await jwt.verifyToken(token);
     if (decoded) {
-      req.employe = decoded;
+      req.user = decoded;
       next();
     } else {
-      throw new UnAuthorizedException("Unauthorized Access!");
+      throw new UnAuthorizedException("Invalid token");
     }
   } catch (err) {
     next(err);

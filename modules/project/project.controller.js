@@ -4,11 +4,11 @@ const projectService = require("./project.service");
 exports.register = async (req, res, next) => {
   const { body } = req;
   const response = await projectService.register(body);
-  console.log(response);
   res.send(response).status(200);
 };
 
 exports.getAll = async (req, res, next) => {
+  console.log("hi");
   const results = await projectService.getAll();
   res.send(results).status(200);
 };

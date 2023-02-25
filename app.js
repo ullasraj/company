@@ -1,6 +1,5 @@
 require("dotenv").config();
 const express = require("express");
-const multer = require("multer");
 const route = require("./routes");
 
 const app = express();
@@ -15,17 +14,9 @@ app.use(
 
 app.use(express.json({ limit: "50mb" }));
 
-app.use("/", route);
+app.use("/api", route);
 
-// const upload = multer({ dest: "uploads/" }).single("demo_image");
-// app.post("/image", (req, res) => {
-//   upload(req, res, (err) => {
-//     if (err) {
-//       res.status(400).send("something wrong");
-//     }
-//     res.send(req.file);
-//   });
-// });
 app.listen(process.env.PORT, () => {
   console.log("server listerning on Port ", process.env.PORT);
 });
+module.exports = app;

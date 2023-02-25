@@ -1,42 +1,48 @@
 const responseHelper = require("../../helpers");
 const employeService = require("./employe.service");
-const multer = require("multer");
 
 exports.register = async (req, res, next) => {
-  const { body } = req;
-  const exists = await employeService.empCheck(body);
-  if (!exists) {
+  try {
+    const { body } = req;
+
     const result = await employeService.register(body);
-    // const { name } = result.response;
+
     return responseHelper.success(res, result);
+  } catch (error) {
+    console.error(error);
+    next(error);
   }
-  res.send(exists);
 };
 
 exports.login = async (req, res, next) => {
-  const { body } = req;
-  const result = await employeService.login(body);
-  res.send(result);
+  try {
+    const { body } = req;
+    const result = await employeService.login(body);
+
+    res.send(result);
+  } catch (error) {
+    next(error);
+  }
 };
 
 exports.home = async (req, res, next) => {
-  res.send("welcome home page");
+  res.send(req.user);
 };
 
-// exports.upload = async (req, res, next) => {
-//   console.log(file);
-//   const result = await employeService.upload(req);
-//   res.send(result);
-// };
-exports.upload = async (req, res) => {
-  console.log(req.file);
+exports.upload = async (req, res, next) => {
+  try {
+    const result = await employeService.profile(req.params.id, req.file);
+    return responseHelper.success(res, result);
+  } catch (error) {
+    next(error);
+  }
 };
 
-exports.uploadFile = async (req, res) => {
-  const result = await employeService.uploaded(req, res, (err) => {
+exports.uploadFile = async (req, res, next) => {
+  employeService.uploaded(req, res, (err) => {
     if (err) {
-      res.status(400).send("something wrong");
+      res.status(400).send(err);
     }
-    res.send(req.file);
+    next();
   });
 };

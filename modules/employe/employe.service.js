@@ -1,16 +1,22 @@
 const db = require("../../models");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const multer = require("multer");
+
 const path = require("path");
 const { MESSAGES } = require("../../config");
-const { BadRequestException } = require("../../helpers/errorResponse");
+const {
+  BadRequestException,
+  UnHandledException,
+} = require("../../helpers/errorResponse");
+const { bcrypt, jwt, multer } = require("../../utils");
 
 exports.register = async (employe) => {
-  const salt = await bcrypt.genSalt(10);
-  employe.password = await bcrypt.hash(employe.password, salt);
+  employe.password = await bcrypt.generatePassword(employe.password);
   const response = await db.Employe.create(employe);
-  return { response };
+
+  return {
+    id: response.id,
+    name: response.name,
+    email: response.email,
+  };
 };
 
 exports.login = async (employe) => {
@@ -19,12 +25,22 @@ exports.login = async (employe) => {
       email: employe.email,
     },
   });
-  if (!result) throw new BadRequestException(MESSAGES.USER.LOGIN.INVALID_CREDS);
-  const validPassword = await bcrypt.compare(employe.password, result.password);
+  if (!result)
+    throw new BadRequestException(MESSAGES.EMPLOYE.LOGIN.INVALID_CREDS);
+  const validPassword = await bcrypt.verifyPassword(
+    employe.password,
+    result.password
+  );
   if (!validPassword)
-    throw new BadRequestException(MESSAGES.USER.LOGIN.INVALID_CREDS);
-  const token = jwt.sign({ user_email: employe.email }, process.env.TOKEN_KEY);
-  return token;
+    throw new BadRequestException(MESSAGES.EMPLOYE.LOGIN.INVALID_CREDS);
+  const token = jwt.generateToken({
+    user_email: employe.email,
+    user_id: result.id,
+  });
+  return {
+    jwt_token: token,
+    id: result.id,
+  };
 };
 
 exports.empCheck = async (employe) => {
@@ -48,45 +64,34 @@ exports.empCheck = async (employe) => {
   return response;
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, next) => {
-    next(null, "uploads");
-  },
-  filename: (req, file, next) => {
-    next(null, Date.now() + path.extname(file.originalname));
-  },
-});
+//image storage
 
-exports.uploaded = multer({
-  storage: storage,
-  limits: { fileSize: "1000000" },
-  fileFilter: (req, file, next) => {
-    const fileTypes = /jpeg|jpg|png/;
-    const mimeType = fileTypes.test(file.mimetype);
-    const extname = fileTypes.test(path.extname(file.originalname));
-
-    if (mimeType && extname) {
-      return next(null, true);
-    }
-    next("give proper file format to upload");
-  },
-}).single("image");
-
-exports.upload = async (req, res) => {
-  console.log("hi");
+exports.uploaded = async (req, res, next) => {
+  try {
+    await multer(req, res);
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
-// } multer({
-
-//   storage: storage,
-// limits: { fileSize: "1000000" },
-// fileFilter: (req, file, next) => {
-//   const fileTypes = /jpeg|jpg|png/;
-//   const mimeType = fileTypes.test(file.mimetype);
-//   const extname = fileTypes.test(path.extname(file.originalname));
-
-//   if (mimeType && extname) {
-//     return next(null, true);
-//   }
-//   next("give proper file format to upload");
-// },
-// }).single("image");
+exports.profile = async (id, image) => {
+  const result = await db.Employe.findOne({
+    where: {
+      id: id,
+    },
+  });
+  if (!result) throw new BadRequestException(MESSAGES.EMPLOYE.UPDATION.MSG);
+  const response = await db.Employe.update(
+    {
+      profile: image.path,
+    },
+    { where: { id: id } }
+  );
+  if (!response) {
+    throw new BadRequestException(MESSAGES.EMPLOYE.UPDATION.FAIL);
+  }
+  return {
+    response,
+    name: result.name,
+  };
+};
